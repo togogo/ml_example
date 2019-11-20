@@ -6,25 +6,79 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+library(fs)
+library(tidymodels)
+library(tidyverse)
+
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r download, cache=TRUE}
+download.file(url = "https://github.com/TheUpshot/2018-live-poll-results/archive/master.zip",
+              destfile = "master.zip",
+              quiet = TRUE,
+              mode = "wb")
 
-```{r cars}
-summary(cars)
+unzip("master.zip")
+
+raw <- fs::dir_ls("2018-live-poll-results-master/data") %>%
+  map_dfr(read_csv, 
+          .id = "source", 
+          col_types = cols(
+                           .default = col_character(),
+                           turnout_scale = col_double(),
+                           turnout_score = col_double(),
+                           w_LV = col_double(),
+                           w_RV = col_double(),
+                           final_weight = col_double(),
+                           timestamp = col_datetime(format = "")
+                            ))
+
+
+file_delete(c("master.zip", "2018-live-poll-results-master"))
+
 ```
 
-## Including Plots
+```{r clean}
+# Data is somewhat messy. Some of our functions require that the variable be a
+# factor with two levels, rather than a simple 0/1 variable. Many of the
+# variables in the original data are missing for thousands of observations.
+# Maybe clean up this code to do all the as.factor at the end?
 
-You can also embed plots, for example:
+x <- raw %>% 
+  mutate(dvote = as.factor(ifelse(response == "Dem", "Yes", "No"))) %>% 
+  mutate(gender = as.factor(ifelse(gender == "Female", "Female", "Male"))) %>% 
+  
+  mutate(party = factor(case_when(
+    partyid %in% c("Democrat", "Republican") ~ partyid,
+    partyid == "Independent (No party)" ~ "Independent",
+    TRUE ~ "Other"), levels = c("Democrat", "Republican", "Independent", "Other"))) %>% 
+  
+  # Might add some other variables later. Maybe only dvote really needs to be a
+  # factor?
+  
+  select(dvote, gender, party)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r make_a_model}
+
+model_1 <- glm(data = x, dvote ~ gender, family = "binomial")
+
+x <- x %>% 
+  mutate(prediction = predict(model_1, type = "response")) 
+
+```
+
+```{r add_prediction_back}
+
+x %>% 
+  mutate(guess = as.factor(ifelse(prediction > 0.5, "Yes", "No")))
+
+```
+
+
+
