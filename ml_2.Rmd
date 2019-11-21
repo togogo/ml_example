@@ -11,7 +11,7 @@ library(fs)
 library(tidymodels)
 library(tidyverse)
 library(yardstick)
-
+library(skimr)
 ```
 
 ## Predicting Democratic Votes
