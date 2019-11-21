@@ -75,7 +75,7 @@ clean <- raw_data %>%
 
 model_1 <- glm(data = clean, dvote ~ gender, family = "binomial")
 
-x <- clean %>% 
+x_1 <- clean %>% 
   mutate(prediction = predict(model_1, type = "response")) %>% 
   mutate(pred_dvote = as.factor(ifelse(prediction > mean(prediction), "Yes", "No")))
 
