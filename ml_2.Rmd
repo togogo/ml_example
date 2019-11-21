@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(fs)
 library(tidymodels)
 library(tidyverse)
+library(yardstick)
 
 ```
 
@@ -82,10 +83,55 @@ model_1 <- glm(data = clean, dvote ~ gender, family = "binomial")
 
 x_1 <- clean %>% 
   mutate(prediction = predict(model_1, type = "response")) %>% 
-  mutate(pred_dvote = as.factor(ifelse(prediction > mean(prediction), "Yes", "No")))
+  mutate(pred_dvote = as.factor(ifelse(prediction > mean(prediction), "Yes", "No"))) %>%
+  mutate(accuracy = ifelse(dvote == pred_dvote, 1, 0))
 
+#pred_accuracy <- sum(x_1$accuracy)/nrow(x_1)
+
+pred_accuracy_1 <- metrics(x_1, dvote, pred_dvote)
 ```
 
+```{r make_a_model}
+# Make a model and then add predictions from that model back to the original
+# data. We need the predictions and the original data together so that we can
+# evaluate how well our model does. We create two sorts of predictions: the raw
+# probability, which is just on a 0--1 scale and the pred_dvote with is a two
+# level factor variable just like the original dvote.
 
+# All of this is relatively simple because there is only one independent
+# variable in the model and the dependent variable only has two levels.
 
+model_2 <- glm(data = clean, dvote ~ gender + party + state + office, family = "binomial")
+
+x_2 <- clean %>% 
+  mutate(prediction = predict(model_2, type = "response")) %>% 
+  mutate(pred_dvote = as.factor(ifelse(prediction > mean(prediction), "Yes", "No"))) %>%
+  mutate(accuracy = ifelse(dvote == pred_dvote, 1, 0))
+
+#pred_accuracy <- sum(x_1$accuracy)/nrow(x_1)
+
+pred_accuracy_2 <- metrics(x_2, dvote, pred_dvote)
+```
+
+```{r make_a_model}
+# Make a model and then add predictions from that model back to the original
+# data. We need the predictions and the original data together so that we can
+# evaluate how well our model does. We create two sorts of predictions: the raw
+# probability, which is just on a 0--1 scale and the pred_dvote with is a two
+# level factor variable just like the original dvote.
+
+# All of this is relatively simple because there is only one independent
+# variable in the model and the dependent variable only has two levels.
+
+model_3 <- glm(data = clean, dvote ~ gender * party * state + office, family = "binomial")
+
+x_3 <- clean %>% 
+  mutate(prediction = predict(model_3, type = "response")) %>% 
+  mutate(pred_dvote = as.factor(ifelse(prediction > mean(prediction), "Yes", "No"))) %>%
+  mutate(accuracy = ifelse(dvote == pred_dvote, 1, 0))
+
+#pred_accuracy <- sum(x_1$accuracy)/nrow(x_1)
+
+pred_accuracy_3 <- metrics(x_3, dvote, pred_dvote)
+```
 
