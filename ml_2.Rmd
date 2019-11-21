@@ -47,7 +47,8 @@ file_delete(c("master.zip", "2018-live-poll-results-master"))
 # Data is somewhat messy. Some of our functions require that the dependent
 # variable be a factor with two levels, rather than a simple 0/1 variable. Many
 # of the variables in the original data are missing for thousands of
-# observations.
+# observations. I think it is useful to know the state in which the poll was
+# conducted and the office for which the candidates are running.
 
 clean <- raw_data %>% 
   mutate(dvote = as.factor(ifelse(response == "Dem", "Yes", "No"))) %>% 
@@ -56,10 +57,14 @@ clean <- raw_data %>%
   mutate(party = case_when(partyid %in% c("Democrat", "Republican") ~ partyid,
                            partyid == "Independent (No party)" ~ "Independent",
                            TRUE ~ "Other")) %>% 
+  mutate(state = toupper(str_sub(source, 51, 52))) %>% 
+  mutate(office = case_when(str_detect(source, pattern = "sen") ~ "SEN",
+                            str_detect(source, pattern = "gov") ~ "GOV",
+                            TRUE ~ "HSE")) %>% 
   
   # Might add some other variables later, especially age, education, source.
   
-  select(dvote, gender, party)
+  select(dvote, gender, party, state, office)
 
 ```
 
