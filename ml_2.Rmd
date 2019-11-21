@@ -23,7 +23,7 @@ download.file(url = "https://github.com/TheUpshot/2018-live-poll-results/archive
 
 unzip("master.zip")
 
-raw <- fs::dir_ls("2018-live-poll-results-master/data") %>%
+raw_data <- fs::dir_ls("2018-live-poll-results-master/data") %>%
   map_dfr(read_csv, 
           .id = "source", 
           col_types = cols(
@@ -42,22 +42,20 @@ file_delete(c("master.zip", "2018-live-poll-results-master"))
 ```
 
 ```{r clean}
-# Data is somewhat messy. Some of our functions require that the variable be a
-# factor with two levels, rather than a simple 0/1 variable. Many of the
-# variables in the original data are missing for thousands of observations.
-# Maybe clean up this code to do all the as.factor at the end?
+# Data is somewhat messy. Some of our functions require that the dependent
+# variable be a factor with two levels, rather than a simple 0/1 variable. Many
+# of the variables in the original data are missing for thousands of
+# observations.
 
-x <- raw %>% 
+clean <- raw_data %>% 
   mutate(dvote = as.factor(ifelse(response == "Dem", "Yes", "No"))) %>% 
-  mutate(gender = as.factor(ifelse(gender == "Female", "Female", "Male"))) %>% 
+  mutate(gender = ifelse(gender == "Female", "Female", "Male")) %>% 
   
-  mutate(party = factor(case_when(
-    partyid %in% c("Democrat", "Republican") ~ partyid,
-    partyid == "Independent (No party)" ~ "Independent",
-    TRUE ~ "Other"), levels = c("Democrat", "Republican", "Independent", "Other"))) %>% 
+  mutate(party = case_when(partyid %in% c("Democrat", "Republican") ~ partyid,
+                           partyid == "Independent (No party)" ~ "Independent",
+                           TRUE ~ "Other")) %>% 
   
-  # Might add some other variables later. Maybe only dvote really needs to be a
-  # factor?
+  # Might add some other variables later, especially age, education, source.
   
   select(dvote, gender, party)
 
@@ -65,20 +63,22 @@ x <- raw %>%
 ```
 
 ```{r make_a_model}
+# Make a model and then add predictions from that model back to the original
+# data. We need the predictions and the original data together so that we can
+# evaluate how well our model does. We create two sorts of predictions: the raw
+# probability, which is just on a 0--1 scale and the pred_dvote with is a two
+# level factor variable just like the original dvote.
 
-model_1 <- glm(data = x, dvote ~ gender, family = "binomial")
+# All of this is relatively simple because there is only one independent
+# variable in the model and the dependent variable only has two levels.
 
-x <- x %>% 
-  mutate(prediction = predict(model_1, type = "response")) 
+model_1 <- glm(data = clean, dvote ~ gender, family = "binomial")
 
+x <- clean %>% 
+  mutate(prediction = predict(model_1, type = "response")) %>% 
+  mutate(pred_dvote = as.factor(ifelse(prediction > mean(prediction), "Yes", "No")))
 ```
 
-```{r add_prediction_back}
-
-x %>% 
-  mutate(guess = as.factor(ifelse(prediction > 0.5, "Yes", "No")))
-
-```
 
 
 
