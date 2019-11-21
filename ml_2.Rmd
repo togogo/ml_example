@@ -13,9 +13,13 @@ library(tidyverse)
 
 ```
 
+## Predicting Democratic Votes
 
 
 ```{r download, cache=TRUE}
+# Mostly the same code as Tuesday, but cleaned up. Do you understand what every
+# line does? If not, ask your partner!
+
 download.file(url = "https://github.com/TheUpshot/2018-live-poll-results/archive/master.zip",
               destfile = "master.zip",
               quiet = TRUE,
@@ -26,8 +30,7 @@ unzip("master.zip")
 raw_data <- fs::dir_ls("2018-live-poll-results-master/data") %>%
   map_dfr(read_csv, 
           .id = "source", 
-          col_types = cols(
-                           .default = col_character(),
+          col_types = cols(.default = col_character(),
                            turnout_scale = col_double(),
                            turnout_score = col_double(),
                            w_LV = col_double(),
@@ -35,7 +38,6 @@ raw_data <- fs::dir_ls("2018-live-poll-results-master/data") %>%
                            final_weight = col_double(),
                            timestamp = col_datetime(format = "")
                             ))
-
 
 file_delete(c("master.zip", "2018-live-poll-results-master"))
 
@@ -59,7 +61,6 @@ clean <- raw_data %>%
   
   select(dvote, gender, party)
 
-
 ```
 
 ```{r make_a_model}
@@ -77,6 +78,7 @@ model_1 <- glm(data = clean, dvote ~ gender, family = "binomial")
 x <- clean %>% 
   mutate(prediction = predict(model_1, type = "response")) %>% 
   mutate(pred_dvote = as.factor(ifelse(prediction > mean(prediction), "Yes", "No")))
+
 ```
 
 
